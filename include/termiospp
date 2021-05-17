@@ -1,0 +1,309 @@
+// termiospp - c++ termios wrapper around termios.h
+//
+// MIT License
+//
+// Copyright (c) 2021 Ferhat Geçdoğan All Rights Reserved.
+// Distributed under the terms of the MIT License.
+//
+//
+
+#ifndef TERMIOSPP
+#define TERMIOSPP
+
+#include <termios.h>
+
+using TermiosFlag = unsigned int;
+using LineSpeed   = unsigned int;
+using SpecialCh   = unsigned char;
+
+#define TERMIOS_NCCS     32
+
+class Termios {
+public:
+    //TermiosFlag input_flag,
+    //            output_flag,
+    //            control_flag,
+    //            local_flag;
+
+    //SpecialCh   line_discipline = '\0',
+    //            control_characters[TERMIOS_NCCS] = {'\0'};
+
+    //LineSpeed   input_speed = 0, output_speed =0;
+
+    struct termios __termios;
+public:
+    Termios ()= default;
+    ~Termios()= default;
+
+    void set_input_flag  (TermiosFlag input_flag   ) noexcept { this->__termios.c_iflag = input_flag    ; }
+    void set_output_flag (TermiosFlag output_flag  ) noexcept { this->__termios.c_oflag = output_flag   ; }
+    void set_control_flag(TermiosFlag control_flag ) noexcept { this->__termios.c_cflag = control_flag  ; }
+    void set_local_flag  (TermiosFlag local_flag   ) noexcept { this->__termios.c_lflag = local_flag    ; }
+
+    void set_line_discipline
+                         (SpecialCh line_discipline) noexcept { this->__termios.c_line = line_discipline; }
+
+    void set_control_character(SpecialCh control_character, std::size_t to = 0) noexcept {
+        if(to <= TERMIOS_NCCS) { this->__termios.c_cc[to] = control_character; }
+    }
+
+    void __get_input_speed (LineSpeed input_speed    ) noexcept {this->__termios.c_ispeed= input_speed    ; }
+    void __get_output_speed(LineSpeed output_speed   ) noexcept {this->__termios.c_ospeed= output_speed   ; }
+
+    TermiosFlag __get_input_flag() noexcept {
+        return this->__termios.c_iflag;
+    }
+
+    TermiosFlag __get_output_flag() noexcept {
+        return this->__termios.c_oflag;
+    }
+
+    TermiosFlag __get_control_flag() noexcept {
+        return this->__termios.c_cflag;
+    }
+
+    TermiosFlag __get_local_flag() noexcept {
+        return this->__termios.c_lflag;
+    }
+
+    SpecialCh __get_line_discipline() noexcept {
+        return this->__termios.c_line;
+    }
+
+    LineSpeed __get_input_speed() noexcept {
+        return this->__termios.c_ispeed;
+    }
+
+    LineSpeed __get_output_speed() noexcept {
+        return this->__termios.c_ospeed;
+    }
+};
+
+namespace term {
+    static int get_attribute(int fd, Termios* termios_p) noexcept {
+        return tcgetattr    (fd, &termios_p->__termios);
+    }
+
+    static int set_attribute(int fd, int optional_actions,
+                             Termios* termios_p) noexcept {
+        return tcsetattr    (fd, optional_actions, &termios_p->__termios);
+    }
+
+    static int send_break   (int fd, int duration) noexcept {
+        return tcsendbreak  (fd, duration);
+    }
+
+    static int drain        (int fd) noexcept {
+        return tcdrain      (fd);
+    }
+
+    static int flush        (int fd, int queue_selector) noexcept {
+        return tcflow       (fd, queue_selector);
+    }
+
+    static int flow         (int fd, int action) noexcept {
+        return tcflow       (fd, action);
+    }
+
+    #if defined(_DEFAULT_SOURCE) || defined(_BSD_SOURCE)
+        static void make_raw    (Termios* termios_p) noexcept {
+            cfmakeraw(&termios_p->__termios);
+        }
+    #endif // defined(_DEFAULT_SOURCE) || defined(_BSD_SOURCE)
+
+    static LineSpeed get_input_speed
+                            (Termios* termios_p) noexcept {
+        return cfgetispeed(&termios_p->__termios);
+    }
+
+    static LineSpeed get_output_speed
+                            (Termios* termios_p) noexcept {
+        return cfgetospeed(&termios_p->__termios);
+    }
+
+    static int set_input_speed(Termios* termios_p, LineSpeed speed) noexcept {
+        return cfsetispeed(&termios_p->__termios, speed);
+    }
+
+    static int set_output_speed(Termios* termios_p, LineSpeed speed) noexcept {
+        return cfsetospeed(&termios_p->__termios, speed);
+    }
+
+    #if defined(_DEFAULT_SOURCE) || defined(_BSD_SOURCE)
+        static int set_speed(Termios* termios_p, LineSpeed speed) noexcept {
+                return cfsetspeed(&termios_p->__termios, speed);
+        }
+    #endif // defined(_DEFAULT_SOURCE) || defined(_BSD_SOURCE)
+}
+
+#define TERMIOS_INTR         0       // VINTR
+#define TERMIOS_QUIT         1       // VQUIT
+#define TERMIOS_ERASE        2       // VERASE
+#define TERMIOS_KILL         3       // VKILL
+#define TERMIOS_EOF          4       // VEOF
+#define TERMIOS_TIME         5       // VTIME
+#define TERMIOS_MIN          6       // VMIN
+#define TERMIOS_SWTC         7       // VSWTC
+#define TERMIOS_START        8       // VSTART
+#define TERMIOS_STOP         9       // VSTOP
+#define TERMIOS_SUSP         10      // VSUSP
+#define TERMIOS_EOL          11      // VEOL
+#define TERMIOS_REPRINT      12      // VREPRINT
+#define TERMIOS_DISCARD      13      // VDISCARD
+#define TERMIOS_WERASE       14      // VWERASE
+#define TERMIOS_LNEXT        15      // VLNEXT
+#define TERMIOS_EOL2         16      // VEOL2
+
+#define TERMIOS_I_GN_BRK     0000001 // IGNBRK
+#define TERMIOS_BRK_INT      0000002 // BRKINT
+#define TERMIOS_I_GN_PAR     0000004 // IGNPAR
+#define TERMIOS_PARM_RK      0000010 // PARMRK
+#define TERMIOS_I_NPCK       0000020 // INPCK
+#define TERMIOS_I_STRIP      0000040 // ISTRIP
+#define TERMIOS_I_NLCR       0000100 // INLCR
+#define TERMIOS_I_GNCR       0000200 // IGNCR
+#define TERMIOS_I_CRNL       0000400 // ICRNL
+#define TERMIOS_I_UCLC       0001000 // IUCLC
+#define TERMIOS_I_XON        0002000 // IXON
+#define TERMIOS_I_XANY       0004000 // IXANY
+#define TERMIOS_I_XOFF       0010000 // IXOFF
+#define TERMIOS_I_MAXBEL     0020000 // IMAXBEL
+#define TERMIOS_I_UTF8       0040000 // IUTF8
+
+#define TERMIOS_O_POST       0000001 // OPOST
+#define TERMIOS_O_LCUC       0000002 // OLCUC
+#define TERMIOS_O_NLCR       0000004 // ONLCR
+#define TERMIOS_O_CRNL       0000010 // OCRNL
+#define TERMIOS_O_NOCR       0000020 // ONOCR
+#define TERMIOS_O_NLRET      0000040 // ONLRET
+#define TERMIOS_O_FILL       0000100 // OFILL
+#define TERMIOS_O_FDEL       0000200 // OFDEL
+
+#if defined(__USE_MISC) || defined(__USE_XOPEN)
+    #define TERMIOS_NL_DELAY 0000400 // NLDLY
+    #define TERMIOS_NL_0     0000000 // NL0
+    #define TERMIOS_NL_1     0000400 // NL1
+    #define TERMIOS_CR_DELAY 0003000 // CRDLY
+    #define TERMIOS_CR_0     0000000 // CR0
+    #define TERMIOS_CR_1     0001000 // CR1
+    #define TERMIOS_CR_2     0002000 // CR2
+    #define TERMIOS_CR_3     0003000 // CR3
+    #define \
+           TERMIOS_TAB_DELAY 0014000 // TABDLY
+    #define TERMIOS_TAB_0    0000000 // TAB0
+    #define TERMIOS_TAB_1    0004000 // TAB1
+    #define TERMIOS_TAB_2    0010000 // TAB2
+    #define TERMIOS_TAB_3    0014000 // TAB3
+    #define TERMIOS_BS_DELAY 0020000 // BSDLY
+    #define TERMIOS_BS_0     0000000 // BS0
+    #define TERMIOS_BS_1     0020000 // BS1
+    #define TERMIOS_FF_DELAY 0100000 // FFDLY
+    #define TERMIOS_FF_0     0000000 // FF0
+    #define TERMIOS_FF_1     0100000 // FF1
+#endif // defined(__USE_MISC) || defined(__USE_XOPEN)
+
+#define TERMIOS_VT_DELAY     0040000 // VTDLY
+#define TERMIOS_VT_0         0000000 // VT0
+#define TERMIOS_VT_1         0040000 // VT1
+
+#define TERMIOS_I_SIG        0000001 // ISIG
+#define TERMIOS_I_CANON      0000002 // ICANON
+
+#define TERMIOS_ECHO         0000010 // ECHO
+#define TERMIOS_ECHO_E       0000020 // ECHOE
+#define TERMIOS_ECHO_K       0000040 // ECHOK
+#define TERMIOS_ECHO_NL      0000100 // ECHONL
+#define TERMIOS_NO_FLUSH     0000200 // NOFLSH
+#define TERMIOS_TO_STOP      0000400 // TOSTOP
+
+#define  TERMIOS_BIT_0       0000000 // B0
+#define  TERMIOS_BIT_50      0000001 // B50
+#define  TERMIOS_BIT_75      0000002 // B75
+#define  TERMIOS_BIT_110     0000003 // B110
+#define  TERMIOS_BIT_134     0000004 // B134
+#define  TERMIOS_BIT_150     0000005 // B150
+#define  TERMIOS_BIT_200     0000006 // B200
+#define  TERMIOS_BIT_300     0000007 // B300
+#define  TERMIOS_BIT_600     0000010 // B600
+#define  TERMIOS_BIT_1200    0000011 // B1200
+#define  TERMIOS_BIT_1800    0000012 // B1800
+#define  TERMIOS_BIT_2400    0000013 // B2400
+#define  TERMIOS_BIT_4800    0000014 // B4800
+#define  TERMIOS_BIT_9600    0000015 // B9600
+#define  TERMIOS_BIT_19200   0000016 // B19200
+#define  TERMIOS_BIT_38400   0000017 // B38400
+
+#define  TERMIOS_CSIZE       0000060 // CSIZE
+#define  TERMIOS_CS5         0000000 // CS5
+#define  TERMIOS_CS6         0000020 // CS6
+#define  TERMIOS_CS7         0000040 // CS7
+#define  TERMIOS_CS8         0000060 // CS8
+#define  TERMIOS_CSTOPB      0000100 // CSTOPB
+#define  TERMIOS_CREAD       0000200 // CREAD
+#define  TERMIOS_PARENB      0000400 // PARENB
+#define  TERMIOS_PARODD      0001000 // PARODD
+#define  TERMIOS_HUPCL       0002000 // HUPCL
+#define  TERMIOS_CLOCAL      0004000 // CLOCAL
+
+#define  TERMIOS_BIT_57600   0010001 // B57600
+#define  TERMIOS_BIT_115200  0010002 // B115200
+#define  TERMIOS_BIT_230400  0010003 // B230400
+#define  TERMIOS_BIT_460800  0010004 // B460800
+#define  TERMIOS_BIT_500000  0010005 // B500000
+#define  TERMIOS_BIT_576000  0010006 // B576000
+#define  TERMIOS_BIT_921600  0010007 // B921600
+#define  TERMIOS_BIT_1000000 0010010 // B1000000
+#define  TERMIOS_BIT_1152000 0010011 // B1152000
+#define  TERMIOS_BIT_1500000 0010012 // B1500000
+#define  TERMIOS_BIT_2000000 0010013 // B2000000
+#define  TERMIOS_BIT_2500000 0010014 // B2500000
+#define  TERMIOS_BIT_3000000 0010015 // B3000000
+#define  TERMIOS_BIT_3500000 0010016 // B3500000
+#define  TERMIOS_BIT_4000000 0010017 // B4000000
+#define  TERMIOS_MAX_BAUD    B4000000// __MAX_BAUD
+
+#if defined(__USE_MISC)
+    #define TERMIOS_XTABS    0014000 // XTABS
+
+
+    #define TERMIOS_CBAUD    0010017 // CBAUD
+
+    #define TERMIOS_EXTA     B19200  // EXTA
+    #define TERMIOS_EXTB     B38400  // EXTB
+
+    #define TERMIOS_CBAUDEX  0010000 // CBAUDEX
+
+    #define TERMIOS_CIBAUD   \
+                        002003600000 // CIBAUD
+
+    #define TERMIOS_CMSPAR   \
+                        010000000000 // CMSPAR
+
+    #define TERMIOS_CRTSCTS  \
+                        020000000000 // CRTSCTS
+
+    #define TERMIOS_ECHO_CTL 0001000 // ECHOCTL
+    #define TERMIOS_ECHO_PRT 0002000 // ECHOPRT
+    #define TERMIOS_ECHO_KE  0004000 // ECHOKE
+    #define TERMIOS_FLUSH_O  0010000 // FLUSHO
+    #define TERMIOS_P_END_IN 0040000 // PENDIN
+
+    #define TERMIOS_EXT_PROC 0200000 // EXTPROC
+#endif // defined(__USE_MISC)
+
+#define TERMIOS_I_EXTEN      0100000 // IEXTEN
+
+#define TERMIOS_O_OFF        0       // TCOOFF
+#define TERMIOS_O_ON         1       // TCOON
+#define TERMIOS_I_OFF        2       // TCIOFF
+#define TERMIOS_I_ON         3       // TCION
+
+#define TERMIOS_I_FLUSH      0       // TCIFLUSH
+#define TERMIOS_O_FLUSH      1       // TCOFLUSH
+#define TERMIOS_IO_FLUSH     2       // TCIOFLUSH
+
+#define TERMIOS_SA_NOW       0       // TCSANOW
+#define TERMIOS_SA_RAIN      1       // TCSADRAIN
+#define TERMIOS_SA_FLUSH     2       // TCSAFLUSH
+
+#endif // TERMIOSPP
